@@ -1,0 +1,36 @@
+type Listeners = {
+  [id: string]: {
+    event: string
+    element: HTMLElement
+    handler: (e: Event) => void
+  }
+}
+
+export class EventListener {
+  private readonly listeners: Listeners = {}
+
+  add(listenerId: string, event: string, element: HTMLElement, handler: (e: Event) => void) {
+    this.listeners[listenerId] = {
+      event,
+      element,
+      handler,
+    }
+
+    element.addEventListener(event, handler)
+  }
+
+  /* 
+  remove メソッドは addメソッドの第1引数で渡していた listenerIdと同じものを引数で渡します。
+  渡されたlistenerIdをキーとして this.listeners に保存されていたオブジェクトを見つけます。
+  もしオブジェクトが見つかった場合は element に対して remove
+  EventListenerを行い、イベントハンドラを削除します。 */
+  remove(listenerId: string){
+    const listener = this.listeners[listenerId]
+
+    if(!listener) return
+
+    listener.element.removeEventListener(listener.event, listener.handler)
+    delete this.listeners[listenerId]
+
+  }
+}
