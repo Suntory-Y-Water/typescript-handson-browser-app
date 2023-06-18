@@ -1,1 +1,3 @@
-"# typescript-handson-browser-app" 
+# typescript-handson-browser-app
+
+練習用リポジトリ
