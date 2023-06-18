@@ -1,8 +1,11 @@
 import { EventListener } from "./EventListener";
-import { Task } from "./task";
+import { TaskCollection } from "./TaskCollection";
+import { Task } from './Task'
 
 class Application {
   private readonly eventLister = new EventListener()
+  private readonly taskCollection = new TaskCollection()
+
   start() {
     const createForm = document.getElementById('createForm') as HTMLElement
 
@@ -16,7 +19,9 @@ class Application {
     if(!titleInput.value) return
 
     const task = new Task({title: titleInput.value})
-    console.log(task);
+    this.taskCollection.add(task)
+    console.log(this.taskCollection);
+    
   }
 }
 
