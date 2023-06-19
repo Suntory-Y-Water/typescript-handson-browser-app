@@ -1,19 +1,22 @@
 import { EventListener } from "./EventListener";
 import { TaskCollection } from "./TaskCollection";
-import { Task } from './Task'
+import { Task, Status} from './Task'
 import { TaskRenderer } from "./TaskRender";
 
 class Application {
   private readonly eventLister = new EventListener()
   private readonly taskCollection = new TaskCollection()
   private readonly taskRender = new TaskRenderer(
-    document.getElementById('todoList') as HTMLElement
+    document.getElementById('todoList') as HTMLElement,
+    document.getElementById('doingList') as HTMLElement,
+    document.getElementById('doneList') as HTMLElement,
   )
 
   start() {
     const createForm = document.getElementById('createForm') as HTMLElement
 
     this.eventLister.add('submit-handler', 'submit', createForm, this.handlerSubmit)
+    this.taskRender.subscribeDragAndDrop(this.handleDropAndDrop)
   }
 
   private handlerSubmit = (e: Event) => {
@@ -40,7 +43,22 @@ class Application {
     if(!window.confirm(`「${task.title}を削除してもよろしいですか？`)) return
 
     this.eventLister.remove(task.id)
-    console.log(this.taskCollection);
+    this.taskRender.remove(task)
+  }
+
+  private handleDropAndDrop = (el: Element, sibling: Element | null, newStatus: Status) => {
+    const taskId = this.taskRender.getId(el)
+
+    if (!taskId) return
+
+    const task = this.taskCollection.find(taskId)
+
+    if (!task) return
+
+    task.update({ status: newStatus })
+    this.taskCollection.update(task)
+
+    console.log(sibling)
   }
 }
 
