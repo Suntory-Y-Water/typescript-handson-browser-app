@@ -1,18 +1,24 @@
 import { Status, Task } from './Task'
 
+const STORAGE_KEY = 'TASKS'
+
 export class TaskCollection {
-  private tasks: Task[] = []
+  private readonly storage
+  private tasks
+
+  constructor() {
+    this.storage = localStorage
+    this.tasks = this.getStoredTasks()
+  }
 
   add(task: Task) {
     this.tasks.push(task)
+    this.updateStorage()
   }
 
-  /* 
-  taskの配列に対してfilterを行い、渡されたtaskと同じidのものがあれば
-  それを抜いた配列を新たに生成してtasksに入れ直す
-  */
   delete(task: Task) {
     this.tasks = this.tasks.filter(({ id }) => id !== task.id)
+    this.updateStorage
   }
 
   find(id: string) {
@@ -30,4 +36,27 @@ export class TaskCollection {
     return this.tasks.filter(({ status }) => status === filterStatus)
   }
 
+  /*
+  updateStorageが呼ばれるたびにlocalstorageのstorage_keyに対してtasksを上書きする
+  */
+  private updateStorage() {
+    this.storage.setItem(STORAGE_KEY, JSON.stringify(this.tasks))
+  }
+
+  private getStoredTasks() {
+    const jsonString = this.storage.getItem(STORAGE_KEY)
+
+    if (!jsonString) return []
+
+    try {
+      const storedTasks: any[] = JSON.parse(jsonString)
+      const tasks = storedTasks.map((task) => new Task(task))
+
+      console.log(tasks)
+      return tasks
+    } catch {
+      this.storage.removeItem(STORAGE_KEY)
+      return []
+    }
+  }
 }
