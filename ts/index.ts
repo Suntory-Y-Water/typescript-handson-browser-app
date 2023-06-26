@@ -1,64 +1,77 @@
-import { EventListener } from "./EventListener";
-import { TaskCollection } from "./TaskCollection";
-import { Task, Status, statusMap} from './Task'
-import { TaskRenderer } from "./TaskRender";
+import { EventListener } from './EventListener'
+import { Status, Task, statusMap } from './Task'
+import { TaskCollection } from './TaskCollection'
+import { TaskRenderer } from './TaskRender'
 
 class Application {
-  private readonly eventLister = new EventListener()
+  private readonly eventListener = new EventListener()
   private readonly taskCollection = new TaskCollection()
-  private readonly taskRender = new TaskRenderer(
+  private readonly taskRenderer = new TaskRenderer(
     document.getElementById('todoList') as HTMLElement,
     document.getElementById('doingList') as HTMLElement,
     document.getElementById('doneList') as HTMLElement,
   )
 
   start() {
+    const taskItems = this.taskRenderer.renderAll(this.taskCollection)
     const createForm = document.getElementById('createForm') as HTMLElement
-
-    // 一括削除機能の作成
     const deleteAllDoneTaskButton = document.getElementById('deleteAllDoneTask') as HTMLElement
 
-    this.eventLister.add('submit-handler', 'submit', createForm, this.handlerSubmit)
-    this.eventLister.add('click-handler', 'click', deleteAllDoneTaskButton, this.handlerClickDeleteAllDoneTask)
+    taskItems.forEach(({ task, deleteButtonEl }) => {
+      this.eventListener.add(task.id, 'click', deleteButtonEl, () => this.handleClickDeleteTask(task))
+    })
 
-    this.taskRender.subscribeDragAndDrop(this.handleDropAndDrop)
+    this.eventListener.add('submit-handler', 'submit', createForm, this.handleSubmit)
+    this.eventListener.add('click-handler', 'click', deleteAllDoneTaskButton, this.handleClickDeleteAllDoneTasks)
+
+    this.taskRenderer.subscribeDragAndDrop(this.handleDropAndDrop)
   }
 
-  private handlerClickDeleteAllDoneTask = () => {
-    if(!window.confirm('DONEのタスクを一括削除してもよろしいですか？')) return
-
-    const doneTasks = this.taskCollection.filter(statusMap.done)
-    doneTasks.forEach((task) => this.executeDeleteTask(task))
-  }
-
-  private handlerSubmit = (e: Event) => {
+  private handleSubmit = (e: Event) => {
     e.preventDefault()
+
     const titleInput = document.getElementById('title') as HTMLInputElement
 
-    if(!titleInput.value) return
+    if (!titleInput.value) return
 
-    const task = new Task({title: titleInput.value})
+    const task = new Task({ title: titleInput.value })
+
     this.taskCollection.add(task)
 
-    const { deleteButtonEl } = this.taskRender.append(task)
+    const { deleteButtonEl } = this.taskRenderer.append(task)
 
-    this.eventLister.add(
+    this.eventListener.add(
       task.id,
       'click',
       deleteButtonEl,
-      () => this.handlerClickDeleteTask(task),
+      () => this.handleClickDeleteTask(task),
     )
+
     titleInput.value = ''
   }
 
-  private handlerClickDeleteTask = (task: Task) => {
-    if(!window.confirm(`「${task.title}を削除してもよろしいですか？`)) return
+  private executeDeleteTask = (task: Task) => {
+    this.eventListener.remove(task.id)
+    this.taskCollection.delete(task)
+    this.taskRenderer.remove(task)
+  }
+
+  private handleClickDeleteTask = (task: Task) => {
+    if (!window.confirm(`「${task.title}」を削除してよろしいですか？`)) return
 
     this.executeDeleteTask(task)
   }
 
+  private handleClickDeleteAllDoneTasks = () => {
+    if (!window.confirm('DONE のタスクを一括削除してよろしいですか？')) return
+
+    const doneTasks = this.taskCollection.filter(statusMap.done)
+
+    doneTasks.forEach((task) => this.executeDeleteTask(task))
+  }
+
   private handleDropAndDrop = (el: Element, sibling: Element | null, newStatus: Status) => {
-    const taskId = this.taskRender.getId(el)
+    const taskId = this.taskRenderer.getId(el)
 
     if (!taskId) return
 
@@ -69,14 +82,19 @@ class Application {
     task.update({ status: newStatus })
     this.taskCollection.update(task)
 
-    console.log(sibling)
-  }
+    if (sibling) {
+      const nextTaskId = this.taskRenderer.getId(sibling)
 
-  // 複数タスクの削除
-  private executeDeleteTask = (task: Task) => {
-    this.eventLister.remove(task.id)
-    this.taskCollection.delete(task)
-    this.taskRender.remove(task)
+      if (!nextTaskId) return
+
+      const nextTask = this.taskCollection.find(nextTaskId)
+
+      if (!nextTask) return
+
+      this.taskCollection.moveAboveTarget (task, nextTask)
+    } else {
+      this.taskCollection.moveToLast(task)
+    }
   }
 }
 
